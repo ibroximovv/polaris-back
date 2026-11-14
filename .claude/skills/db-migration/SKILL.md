@@ -16,8 +16,8 @@ O'rnatilgan Prisma versiyasini aniqlang (`npx prisma --version`). Prisma'ning ka
 
 Fayl: `apps/api/prisma/schema.prisma`.
 
-- Model nomi PascalCase va birlikda (`User`). Jadval nomi `@@map("users")` bilan snake_case va ko'plikda beriladi. Maydonlar camelCase, ustunlar `@map("created_at")` bilan snake_case.
-- Har bir modelda `id`, `createdAt @default(now())` va `updatedAt @updatedAt` bo'ladi.
+- Model nomi PascalCase va birlikda (`User`). Jadval nomi `@@map("users")` bilan snake_case va ko'plikda beriladi. Maydonlar to'g'ridan-to'g'ri snake_case yoziladi (`full_name`), `@map` ishlatilmaydi (qarang: `.claude/rules/nestjs-architecture.md`, "Maydon nomlari").
+- Har bir modelda `id`, `created_at @default(now())` va `updated_at @updatedAt` bo'ladi.
 - ID turi: loyihada qaysi biri (`Int @default(autoincrement())` yoki `String @default(uuid())`) ishlatilgan bo'lsa, o'shani ishlating. Birinchi model uchun foydalanuvchidan so'rang.
 - Pul uchun `Decimal` ishlatiladi, `Float` emas. Sanalar uchun `DateTime`. Cheklangan qiymatlar uchun `enum`.
 - Ko'p qidiriladigan maydonlarga `@@index`, takrorlanmasligi kerak bo'lganlarga `@unique` qo'yiladi.

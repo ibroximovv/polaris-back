@@ -55,7 +55,7 @@ export class AuthController {
   @ApiOkResponse({ type: AuthTokensDto })
   @ApiUnauthorizedResponse()
   refresh(@Body() dto: RefreshTokenDto): Promise<AuthTokens> {
-    return this.authService.refresh(dto.refreshToken);
+    return this.authService.refresh(dto.refresh_token);
   }
 
   @Post('logout')

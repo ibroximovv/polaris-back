@@ -1,13 +1,13 @@
 import type { User } from './users';
 
 export interface AuthTokens {
-  accessToken: string;
-  refreshToken: string;
-  tokenType: 'Bearer';
+  access_token: string;
+  refresh_token: string;
+  token_type: 'Bearer';
   /** Access token lifetime in seconds. */
-  expiresIn: number;
+  expires_in: number;
   /** Refresh token lifetime in seconds. */
-  refreshExpiresIn: number;
+  refresh_expires_in: number;
 }
 
 /** Returned by register and login: the signed-in user plus a fresh token pair. */

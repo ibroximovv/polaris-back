@@ -55,7 +55,7 @@ describe('BaseService', () => {
       repo.findMany.mockResolvedValue([record]);
       repo.count.mockResolvedValue(21);
 
-      const result = await service.findAll(query({ page: 2, limit: 10, sortBy: 'name', search: 'sam' }));
+      const result = await service.findAll(query({ page: 2, limit: 10, sort_by: 'name', search: 'sam' }));
 
       expect(repo.findMany).toHaveBeenCalledWith({
         skip: 10,
@@ -67,12 +67,12 @@ describe('BaseService', () => {
       expect(repo.count).toHaveBeenCalledWith({ search: 'sam' });
       expect(result).toEqual({
         data: [{ id: 1, name: 'Samarkand' }],
-        meta: { page: 2, limit: 10, total: 21, totalPages: 3, hasNext: true, hasPrev: true },
+        meta: { page: 2, limit: 10, total: 21, total_pages: 3, has_next: true, has_prev: true },
       });
     });
 
-    it('rejects a sortBy field that is not allowed', async () => {
-      await expect(service.findAll(query({ sortBy: 'secret' }))).rejects.toThrow(
+    it('rejects a sort_by field that is not allowed', async () => {
+      await expect(service.findAll(query({ sort_by: 'secret' }))).rejects.toThrow(
         new BadRequestException('Cannot sort Item by "secret". Allowed: name'),
       );
       expect(repo.findMany).not.toHaveBeenCalled();
@@ -161,9 +161,9 @@ describe('buildPaginationMeta', () => {
       page: 1,
       limit: 20,
       total: 0,
-      totalPages: 0,
-      hasNext: false,
-      hasPrev: false,
+      total_pages: 0,
+      has_next: false,
+      has_prev: false,
     });
   });
 });

@@ -4,13 +4,13 @@ export type UserRole = 'USER' | 'ADMIN';
 
 export interface User {
   id: string;
-  fullName: string;
+  full_name: string;
   /** E.164, e.g. +998901234567 */
   phone: string;
   email: string | null;
   role: UserRole;
-  isActive: boolean;
-  lastLoginAt: string | null;
-  createdAt: string;
-  updatedAt: string;
+  is_active: boolean;
+  last_login_at: string | null;
+  created_at: string;
+  updated_at: string;
 }

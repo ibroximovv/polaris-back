@@ -79,14 +79,14 @@ describe('createCrudController', () => {
   afterEach(() => jest.restoreAllMocks());
 
   it('GET / passes the parsed pagination query to the service', async () => {
-    const page = { data: [], meta: { page: 2, limit: 5, total: 0, totalPages: 0, hasNext: false, hasPrev: true } };
+    const page = { data: [], meta: { page: 2, limit: 5, total: 0, total_pages: 0, has_next: false, has_prev: true } };
     const spy = jest.spyOn(service, 'findAll').mockResolvedValue(page);
 
     const res = await http.get('/', { params: { page: '2', limit: '5' } });
 
     expect(res.status).toBe(200);
     expect(res.data).toEqual(page);
-    expect(spy).toHaveBeenCalledWith(expect.objectContaining({ page: 2, limit: 5, sortOrder: 'desc' }));
+    expect(spy).toHaveBeenCalledWith(expect.objectContaining({ page: 2, limit: 5, sort_order: 'desc' }));
   });
 
   it('GET / rejects an invalid query', async () => {
@@ -111,7 +111,7 @@ describe('createCrudController', () => {
     const res = await http.get('/9');
     expect(res.status).toBe(404);
     expect(res.data).toMatchObject({
-      statusCode: 404,
+      status_code: 404,
       error: 'Not Found',
       message: 'Item #9 not found',
       path: '/api/v1/items/9',

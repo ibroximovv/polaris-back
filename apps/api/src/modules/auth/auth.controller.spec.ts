@@ -6,7 +6,7 @@ import { AuthService } from './auth.service';
 describe('AuthController', () => {
   const authService = { register: jest.fn(), login: jest.fn(), refresh: jest.fn(), logout: jest.fn() };
   let controller: AuthController;
-  const response = { user: { id: 'u1' }, tokens: { accessToken: 'a' } } as AuthResponse;
+  const response = { user: { id: 'u1' }, tokens: { access_token: 'a' } } as AuthResponse;
 
   beforeEach(async () => {
     jest.resetAllMocks();
@@ -18,7 +18,7 @@ describe('AuthController', () => {
   });
 
   it('register delegates to the service', async () => {
-    const dto = { fullName: 'Aziz', phone: '+998901234567', password: 'Secret123' };
+    const dto = { full_name: 'Aziz', phone: '+998901234567', password: 'Secret123' };
     authService.register.mockResolvedValue(response);
     await expect(controller.register(dto)).resolves.toBe(response);
     expect(authService.register).toHaveBeenCalledWith(dto);
@@ -32,9 +32,9 @@ describe('AuthController', () => {
   });
 
   it('refresh passes the refresh token', async () => {
-    const tokens = { accessToken: 'a2' } as AuthTokens;
+    const tokens = { access_token: 'a2' } as AuthTokens;
     authService.refresh.mockResolvedValue(tokens);
-    await expect(controller.refresh({ refreshToken: 'r' })).resolves.toBe(tokens);
+    await expect(controller.refresh({ refresh_token: 'r' })).resolves.toBe(tokens);
     expect(authService.refresh).toHaveBeenCalledWith('r');
   });
 

@@ -40,15 +40,15 @@ describe('AuthService', () => {
   });
 
   const expectedTokens = {
-    accessToken: 'access-token',
-    refreshToken: 'refresh-token',
-    tokenType: 'Bearer',
-    expiresIn: envs.JWT_ACCESS_EXPIRES_IN,
-    refreshExpiresIn: envs.JWT_REFRESH_EXPIRES_IN,
+    access_token: 'access-token',
+    refresh_token: 'refresh-token',
+    token_type: 'Bearer',
+    expires_in: envs.JWT_ACCESS_EXPIRES_IN,
+    refresh_expires_in: envs.JWT_REFRESH_EXPIRES_IN,
   };
 
   describe('register', () => {
-    const dto = { fullName: 'Aziz Karimov', phone: '+998901234567', email: 'aziz@example.com', password: 'Secret123' };
+    const dto = { full_name: 'Aziz Karimov', phone: '+998901234567', email: 'aziz@example.com', password: 'Secret123' };
 
     it('creates the user with a hashed password and signs them in', async () => {
       usersService.findByPhone.mockResolvedValue(null);
@@ -58,18 +58,18 @@ describe('AuthService', () => {
       const result = await service.register(dto);
 
       expect(usersService.createRecord).toHaveBeenCalledWith({
-        fullName: 'Aziz Karimov',
+        full_name: 'Aziz Karimov',
         phone: '+998901234567',
         email: 'aziz@example.com',
-        passwordHash: 'hash(Secret123)',
+        password: 'hash(Secret123)',
       });
       expect(usersService.updateRecord).toHaveBeenCalledWith(user.id, {
-        refreshTokenHash: 'hash(refresh-token)',
-        lastLoginAt: expect.any(Date),
+        refresh_token_hash: 'hash(refresh-token)',
+        last_login_at: expect.any(Date),
       });
       expect(result.tokens).toEqual(expectedTokens);
-      expect(result.user).toEqual({ ...toUserResponse(user), lastLoginAt: expect.any(String) });
-      expect(result.user).not.toHaveProperty('passwordHash');
+      expect(result.user).toEqual({ ...toUserResponse(user), last_login_at: expect.any(String) });
+      expect(result.user).not.toHaveProperty('password');
     });
 
     it('signs access and refresh tokens with their own secrets and lifetimes', async () => {
@@ -113,7 +113,7 @@ describe('AuthService', () => {
 
       const result = await service.login(dto);
 
-      expect(verify).toHaveBeenCalledWith(user.passwordHash, 'Secret123');
+      expect(verify).toHaveBeenCalledWith(user.password, 'Secret123');
       expect(result.tokens).toEqual(expectedTokens);
       expect(result.user.id).toBe(user.id);
     });
@@ -131,14 +131,14 @@ describe('AuthService', () => {
     });
 
     it('rejects a disabled account', async () => {
-      usersService.findByPhone.mockResolvedValue(makeUserRecord({ isActive: false }));
+      usersService.findByPhone.mockResolvedValue(makeUserRecord({ is_active: false }));
       verify.mockResolvedValue(true);
       await expect(service.login(dto)).rejects.toThrow(new ForbiddenException('Account is disabled'));
     });
   });
 
   describe('refresh', () => {
-    const stored = makeUserRecord({ refreshTokenHash: 'hash(old-refresh)' });
+    const stored = makeUserRecord({ refresh_token_hash: 'hash(old-refresh)' });
 
     it('rotates the token pair', async () => {
       jwtService.verifyAsync.mockResolvedValue({ sub: user.id, jti: 'j', type: 'refresh' });
@@ -148,7 +148,7 @@ describe('AuthService', () => {
       await expect(service.refresh('old-refresh')).resolves.toEqual(expectedTokens);
       expect(jwtService.verifyAsync).toHaveBeenCalledWith('old-refresh', { secret: envs.JWT_REFRESH_SECRET });
       expect(verify).toHaveBeenCalledWith('hash(old-refresh)', 'old-refresh');
-      expect(usersService.updateRecord).toHaveBeenCalledWith(user.id, { refreshTokenHash: 'hash(refresh-token)' });
+      expect(usersService.updateRecord).toHaveBeenCalledWith(user.id, { refresh_token_hash: 'hash(refresh-token)' });
     });
 
     it('rejects an invalid or expired token', async () => {
@@ -172,7 +172,7 @@ describe('AuthService', () => {
 
     it('rejects when the user logged out or no longer exists', async () => {
       jwtService.verifyAsync.mockResolvedValue({ sub: user.id, jti: 'j', type: 'refresh' });
-      usersService.findByIdOrNull.mockResolvedValueOnce(makeUserRecord({ refreshTokenHash: null }));
+      usersService.findByIdOrNull.mockResolvedValueOnce(makeUserRecord({ refresh_token_hash: null }));
       await expect(service.refresh('t')).rejects.toThrow(UnauthorizedException);
       usersService.findByIdOrNull.mockResolvedValueOnce(null);
       await expect(service.refresh('t')).rejects.toThrow(UnauthorizedException);
@@ -180,7 +180,7 @@ describe('AuthService', () => {
 
     it('rejects a disabled account', async () => {
       jwtService.verifyAsync.mockResolvedValue({ sub: user.id, jti: 'j', type: 'refresh' });
-      usersService.findByIdOrNull.mockResolvedValue(makeUserRecord({ refreshTokenHash: 'h', isActive: false }));
+      usersService.findByIdOrNull.mockResolvedValue(makeUserRecord({ refresh_token_hash: 'h', is_active: false }));
       verify.mockResolvedValue(true);
       await expect(service.refresh('t')).rejects.toThrow(ForbiddenException);
     });
@@ -189,7 +189,7 @@ describe('AuthService', () => {
   describe('logout', () => {
     it('clears the stored refresh token', async () => {
       await service.logout(user.id);
-      expect(usersService.updateRecord).toHaveBeenCalledWith(user.id, { refreshTokenHash: null });
+      expect(usersService.updateRecord).toHaveBeenCalledWith(user.id, { refresh_token_hash: null });
     });
 
     it('propagates NotFoundException for an unknown user', async () => {

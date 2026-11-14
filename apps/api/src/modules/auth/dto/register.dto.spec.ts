@@ -11,23 +11,23 @@ function validate(body: object): { dto: RegisterDto; errors: string[] } {
 describe('RegisterDto', () => {
   it('normalizes phone, trims name and lowercases email', () => {
     const { dto, errors } = validate({
-      fullName: '  Aziz Karimov ',
+      full_name: '  Aziz Karimov ',
       phone: '998 (90) 123-45-67',
       email: ' Aziz@Example.COM ',
       password: 'Secret123',
     });
     expect(errors).toEqual([]);
-    expect(dto).toMatchObject({ fullName: 'Aziz Karimov', phone: '+998901234567', email: 'aziz@example.com' });
+    expect(dto).toMatchObject({ full_name: 'Aziz Karimov', phone: '+998901234567', email: 'aziz@example.com' });
   });
 
   it('treats an empty email as absent', () => {
-    const { dto, errors } = validate({ fullName: 'Aziz', phone: '+998901234567', email: '  ', password: 'Secret123' });
+    const { dto, errors } = validate({ full_name: 'Aziz', phone: '+998901234567', email: '  ', password: 'Secret123' });
     expect(errors).toEqual([]);
     expect(dto.email).toBeUndefined();
   });
 
   it('rejects an invalid phone, email and a short password', () => {
-    const { errors } = validate({ fullName: 'Aziz', phone: '12', email: 'nope', password: 'short' });
+    const { errors } = validate({ full_name: 'Aziz', phone: '12', email: 'nope', password: 'short' });
     expect(errors).toEqual(
       expect.arrayContaining([
         'phone must be a valid international phone number, e.g. +998901234567',

@@ -17,7 +17,7 @@ describe('UsersController', () => {
   });
 
   it('GET /me returns the signed-in user', async () => {
-    const user = { id: 'u1', fullName: 'Aziz' } as User;
+    const user = { id: 'u1', full_name: 'Aziz' } as User;
     usersService.findOne.mockResolvedValue(user);
     await expect(controller.me({ id: 'u1', role: 'USER' })).resolves.toBe(user);
     expect(usersService.findOne).toHaveBeenCalledWith('u1');

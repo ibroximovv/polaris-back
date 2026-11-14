@@ -25,12 +25,12 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
     const body = this.buildBody(exception, req, res);
 
-    if (body.statusCode >= 500) {
+    if (body.status_code >= 500) {
       const stack = exception instanceof Error ? exception.stack : String(exception);
-      this.logger.error(`${req.method} ${req.originalUrl} -> ${body.statusCode}: ${this.describe(exception)}`, stack);
+      this.logger.error(`${req.method} ${req.originalUrl} -> ${body.status_code}: ${this.describe(exception)}`, stack);
     }
 
-    res.status(body.statusCode).json(body);
+    res.status(body.status_code).json(body);
   }
 
   buildBody(exception: unknown, req: Request, res: Response): ApiErrorResponse {
@@ -38,18 +38,18 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const base = {
       path: req.originalUrl,
       timestamp: new Date().toISOString(),
-      ...(typeof requestId === 'string' ? { requestId } : {}),
+      ...(typeof requestId === 'string' ? { request_id: requestId } : {}),
     };
 
     if (exception instanceof HttpException) {
       const statusCode = exception.getStatus();
       const response = exception.getResponse();
       const { message, error } = this.extractHttpMessage(response, exception);
-      return { statusCode, error, message, ...base };
+      return { status_code: statusCode, error, message, ...base };
     }
 
     return {
-      statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+      status_code: HttpStatus.INTERNAL_SERVER_ERROR,
       error: 'Internal Server Error',
       message: 'Internal server error',
       ...base,

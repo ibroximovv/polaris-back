@@ -9,34 +9,35 @@ export type { UserRecord };
 
 /** Data needed to create a user. The password is already hashed by the caller (AuthService). */
 export interface CreateUserData {
-  fullName: string;
+  full_name: string;
   phone: string;
   email?: string | null;
-  passwordHash: string;
+  /** argon2 hash of the password. */
+  password: string;
 }
 
 export type UpdateUserData = Partial<
-  Pick<UserRecord, 'fullName' | 'email' | 'isActive' | 'refreshTokenHash' | 'lastLoginAt'>
+  Pick<UserRecord, 'full_name' | 'email' | 'is_active' | 'refresh_token_hash' | 'last_login_at'>
 >;
 
 export function toUserResponse(record: UserRecord): User {
   return {
     id: record.id,
-    fullName: record.fullName,
+    full_name: record.full_name,
     phone: record.phone,
     email: record.email,
     role: record.role,
-    isActive: record.isActive,
-    lastLoginAt: record.lastLoginAt?.toISOString() ?? null,
-    createdAt: record.createdAt.toISOString(),
-    updatedAt: record.updatedAt.toISOString(),
+    is_active: record.is_active,
+    last_login_at: record.last_login_at?.toISOString() ?? null,
+    created_at: record.created_at.toISOString(),
+    updated_at: record.updated_at.toISOString(),
   };
 }
 
 function createUserRepository(prisma: PrismaService): CrudRepository<UserRecord, CreateUserData, UpdateUserData, string> {
   return {
     findMany: ({ skip, take, sortBy, sortOrder }) =>
-      prisma.user.findMany({ skip, take, orderBy: { [sortBy ?? 'createdAt']: sortOrder } }),
+      prisma.user.findMany({ skip, take, orderBy: { [sortBy ?? 'created_at']: sortOrder } }),
     count: () => prisma.user.count(),
     findById: (id) => prisma.user.findUnique({ where: { id } }),
     create: (data) => prisma.user.create({ data }),
@@ -50,7 +51,7 @@ function createUserRepository(prisma: PrismaService): CrudRepository<UserRecord,
 @Injectable()
 export class UsersService extends BaseService<UserRecord, CreateUserData, UpdateUserData, User, string> {
   protected readonly entityName = 'User';
-  protected readonly sortableFields = ['createdAt', 'fullName'];
+  protected readonly sortableFields = ['created_at', 'full_name'];
 
   constructor(private readonly prisma: PrismaService) {
     super(createUserRepository(prisma));

@@ -6,9 +6,9 @@ export interface PaginationMeta {
   page: number;
   limit: number;
   total: number;
-  totalPages: number;
-  hasNext: boolean;
-  hasPrev: boolean;
+  total_pages: number;
+  has_next: boolean;
+  has_prev: boolean;
 }
 
 export interface PaginatedResponse<T> {
@@ -18,10 +18,10 @@ export interface PaginatedResponse<T> {
 
 /** Body returned for every failed request (built by the global exception filter). */
 export interface ApiErrorResponse {
-  statusCode: number;
+  status_code: number;
   error: string;
   message: string | string[];
   path: string;
   timestamp: string;
-  requestId?: string;
+  request_id?: string;
 }

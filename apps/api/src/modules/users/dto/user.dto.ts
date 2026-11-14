@@ -6,12 +6,12 @@ const USER_ROLES: UserRole[] = ['USER', 'ADMIN'];
 /** Swagger model of the public `User` shape. */
 export class UserDto implements User {
   @ApiProperty({ format: 'uuid' }) id!: string;
-  @ApiProperty({ example: 'Aziz Karimov' }) fullName!: string;
+  @ApiProperty({ example: 'Aziz Karimov' }) full_name!: string;
   @ApiProperty({ example: '+998901234567' }) phone!: string;
   @ApiPropertyOptional({ type: String, nullable: true, example: 'aziz@example.com' }) email!: string | null;
   @ApiProperty({ enum: USER_ROLES }) role!: UserRole;
-  @ApiProperty() isActive!: boolean;
-  @ApiPropertyOptional({ type: String, format: 'date-time', nullable: true }) lastLoginAt!: string | null;
-  @ApiProperty({ format: 'date-time' }) createdAt!: string;
-  @ApiProperty({ format: 'date-time' }) updatedAt!: string;
+  @ApiProperty() is_active!: boolean;
+  @ApiPropertyOptional({ type: String, format: 'date-time', nullable: true }) last_login_at!: string | null;
+  @ApiProperty({ format: 'date-time' }) created_at!: string;
+  @ApiProperty({ format: 'date-time' }) updated_at!: string;
 }

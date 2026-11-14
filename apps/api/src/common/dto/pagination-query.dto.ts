@@ -30,12 +30,12 @@ export class PaginationQueryDto {
   @IsOptional()
   @IsString()
   @MaxLength(64)
-  sortBy?: string;
+  sort_by?: string;
 
   @ApiPropertyOptional({ enum: ['asc', 'desc'], default: 'desc' })
   @IsOptional()
   @IsIn(['asc', 'desc'])
-  sortOrder: SortOrder = 'desc';
+  sort_order: SortOrder = 'desc';
 
   @ApiPropertyOptional({ description: 'Free-text search' })
   @IsOptional()

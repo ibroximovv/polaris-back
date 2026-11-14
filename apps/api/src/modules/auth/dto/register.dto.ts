@@ -22,7 +22,7 @@ export class RegisterDto {
   @IsString()
   @MinLength(2)
   @MaxLength(100)
-  fullName!: string;
+  full_name!: string;
 
   @ApiProperty({ example: '+998901234567', description: 'International format; spaces, dashes and brackets are ignored' })
   @Transform(({ value }) => normalizePhone(value))

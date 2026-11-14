@@ -26,7 +26,7 @@ function isPrismaLikeError(error: unknown): error is PrismaLikeError {
 
 export function buildPaginationMeta(page: number, limit: number, total: number): PaginationMeta {
   const totalPages = total === 0 ? 0 : Math.ceil(total / limit);
-  return { page, limit, total, totalPages, hasNext: page < totalPages, hasPrev: page > 1 };
+  return { page, limit, total, total_pages: totalPages, has_next: page < totalPages, has_prev: page > 1 };
 }
 
 /**
@@ -36,7 +36,7 @@ export function buildPaginationMeta(page: number, limit: number, total: number):
  * @Injectable()
  * export class ToursService extends BaseService<TourRecord, CreateTourDto, UpdateTourDto, Tour> {
  *   protected readonly entityName = 'Tour';
- *   protected readonly sortableFields = ['createdAt', 'price'] as const;
+ *   protected readonly sortableFields = ['created_at', 'price'] as const;
  *   constructor(prisma: PrismaService) { super(createTourRepository(prisma)); }
  *   protected toResponse(record: TourRecord): Tour { ... }  // strip private fields
  * }
@@ -57,7 +57,7 @@ export abstract class BaseService<
 > {
   /** Human-readable name used in error messages: `Tour #12 not found`. */
   protected abstract readonly entityName: string;
-  /** Fields a client may pass as `sortBy`. Empty means sorting by a field is not allowed. */
+  /** Fields a client may pass as `sort_by`. Empty means sorting by a field is not allowed. */
   protected readonly sortableFields: readonly string[] = [];
   protected readonly logger: Logger;
 
@@ -71,7 +71,7 @@ export abstract class BaseService<
   }
 
   async findAll(query: PaginationQueryDto): Promise<PaginatedResponse<TResponse>> {
-    const { page, limit, sortBy, sortOrder, search } = query;
+    const { page, limit, sort_by: sortBy, sort_order: sortOrder, search } = query;
     if (sortBy !== undefined && !this.sortableFields.includes(sortBy)) {
       const allowed = this.sortableFields.length > 0 ? this.sortableFields.join(', ') : 'none';
       throw new BadRequestException(`Cannot sort ${this.entityName} by "${sortBy}". Allowed: ${allowed}`);

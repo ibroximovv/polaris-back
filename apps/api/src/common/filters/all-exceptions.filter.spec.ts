@@ -25,12 +25,12 @@ describe('AllExceptionsFilter', () => {
 
     expect(res.status).toHaveBeenCalledWith(404);
     expect(res.json).toHaveBeenCalledWith({
-      statusCode: 404,
+      status_code: 404,
       error: 'Not Found',
       message: 'Tour #1 not found',
       path: '/api/v1/tours/1',
       timestamp: expect.any(String),
-      requestId: 'req-1',
+      request_id: 'req-1',
     });
   });
 
@@ -38,7 +38,7 @@ describe('AllExceptionsFilter', () => {
     const { host, res } = createHost();
     filter.catch(new BadRequestException(['name must be a string']), host);
     expect(res.json).toHaveBeenCalledWith(
-      expect.objectContaining({ statusCode: 400, error: 'Bad Request', message: ['name must be a string'] }),
+      expect.objectContaining({ status_code: 400, error: 'Bad Request', message: ['name must be a string'] }),
     );
   });
 
@@ -50,7 +50,7 @@ describe('AllExceptionsFilter', () => {
 
     expect(res.status).toHaveBeenCalledWith(500);
     expect(res.json).toHaveBeenCalledWith(
-      expect.objectContaining({ statusCode: 500, message: 'Internal server error' }),
+      expect.objectContaining({ status_code: 500, message: 'Internal server error' }),
     );
     expect(logSpy).toHaveBeenCalledWith(
       expect.stringContaining('connection refused'),

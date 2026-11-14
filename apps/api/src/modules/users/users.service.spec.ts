@@ -6,16 +6,16 @@ import { toUserResponse, type UserRecord, UsersService } from './users.service';
 export function makeUserRecord(overrides: Partial<UserRecord> = {}): UserRecord {
   return {
     id: '7f1c2b4e-1d2a-4c3b-9a8e-0f1e2d3c4b5a',
-    fullName: 'Aziz Karimov',
+    full_name: 'Aziz Karimov',
     phone: '+998901234567',
     email: 'aziz@example.com',
-    passwordHash: 'hashed-password',
+    password: 'hashed-password',
     role: 'USER',
-    isActive: true,
-    refreshTokenHash: null,
-    lastLoginAt: null,
-    createdAt: new Date('2026-01-01T00:00:00.000Z'),
-    updatedAt: new Date('2026-01-02T00:00:00.000Z'),
+    is_active: true,
+    refresh_token_hash: null,
+    last_login_at: null,
+    created_at: new Date('2026-01-01T00:00:00.000Z'),
+    updated_at: new Date('2026-01-02T00:00:00.000Z'),
     ...overrides,
   };
 }
@@ -44,20 +44,20 @@ describe('UsersService', () => {
 
   describe('toUserResponse', () => {
     it('drops hashes and serializes dates', () => {
-      const user = toUserResponse(makeUserRecord({ lastLoginAt: new Date('2026-01-03T00:00:00.000Z') }));
+      const user = toUserResponse(makeUserRecord({ last_login_at: new Date('2026-01-03T00:00:00.000Z') }));
       expect(user).toEqual({
         id: record.id,
-        fullName: 'Aziz Karimov',
+        full_name: 'Aziz Karimov',
         phone: '+998901234567',
         email: 'aziz@example.com',
         role: 'USER',
-        isActive: true,
-        lastLoginAt: '2026-01-03T00:00:00.000Z',
-        createdAt: '2026-01-01T00:00:00.000Z',
-        updatedAt: '2026-01-02T00:00:00.000Z',
+        is_active: true,
+        last_login_at: '2026-01-03T00:00:00.000Z',
+        created_at: '2026-01-01T00:00:00.000Z',
+        updated_at: '2026-01-02T00:00:00.000Z',
       });
-      expect(user).not.toHaveProperty('passwordHash');
-      expect(user).not.toHaveProperty('refreshTokenHash');
+      expect(user).not.toHaveProperty('password');
+      expect(user).not.toHaveProperty('refresh_token_hash');
     });
   });
 
@@ -108,7 +108,7 @@ describe('UsersService', () => {
   });
 
   describe('createRecord', () => {
-    const data = { fullName: 'Aziz Karimov', phone: '+998901234567', email: null, passwordHash: 'hash' };
+    const data = { full_name: 'Aziz Karimov', phone: '+998901234567', email: null, password: 'hash' };
 
     it('creates the user', async () => {
       prisma.user.create.mockResolvedValue(record);
@@ -125,13 +125,13 @@ describe('UsersService', () => {
   describe('updateRecord', () => {
     it('updates the user', async () => {
       prisma.user.update.mockResolvedValue(record);
-      await expect(service.updateRecord(record.id, { refreshTokenHash: null })).resolves.toBe(record);
-      expect(prisma.user.update).toHaveBeenCalledWith({ where: { id: record.id }, data: { refreshTokenHash: null } });
+      await expect(service.updateRecord(record.id, { refresh_token_hash: null })).resolves.toBe(record);
+      expect(prisma.user.update).toHaveBeenCalledWith({ where: { id: record.id }, data: { refresh_token_hash: null } });
     });
 
     it('maps a missing record (P2025) to NotFoundException', async () => {
       prisma.user.update.mockRejectedValue({ code: 'P2025' });
-      await expect(service.updateRecord('missing', { fullName: 'X' })).rejects.toThrow(
+      await expect(service.updateRecord('missing', { full_name: 'X' })).rejects.toThrow(
         new NotFoundException('User #missing not found'),
       );
     });

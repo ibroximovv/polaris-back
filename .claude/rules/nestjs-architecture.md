@@ -44,6 +44,16 @@ modules/users/
 - Dependency'lar faqat constructor injection orqali olinadi (`private readonly x: X`). `new SomeService()` ishlatilmaydi.
 - Aylanma bog'liqlik (`forwardRef`) paydo bo'lsa, bu dizayn muammosi belgisi. Uni ishlatishdan oldin foydalanuvchi bilan maslahatlashing.
 
+## Maydon nomlari: snake_case
+
+API va bazadagi barcha maydon nomlari **snake_case** bo'ladi: `full_name`, `refresh_token`, `created_at`.
+
+- **Prisma schema:** model maydonlari to'g'ridan-to'g'ri snake_case yoziladi (`full_name String`), shuning uchun `@map(...)` kerak emas. Model nomi PascalCase, jadval `@@map("users")` bilan.
+- **Kiruvchi DTO'lar** (body/query): `full_name`, `refresh_token`, `sort_by`, `sort_order`.
+- **Javob shakllari** (`packages/types` interface'lari va swagger javob class'lari): `access_token`, `expires_in`, `total_pages`, `status_code`.
+- Parol ustuni `password` deb nomlanadi (`passwordHash`/`password_hash` emas). Unda faqat argon2 hash saqlanadi, ochiq parol hech qachon yozilmaydi.
+- Mahalliy o'zgaruvchilar, funksiya/metod nomlari va ichki (API'ga chiqmaydigan) type'lar odatdagidek camelCase qoladi.
+
 ## DTO va type'lar
 
 - **Kiruvchi ma'lumot** (body/query) uchun modulning `dto/` papkasida `class-validator` dekoratorli **class** DTO yoziladi. Interface DTO runtime'da tekshirilmaydi, shablondagi `todos` bunga yomon namuna.
@@ -51,7 +61,7 @@ modules/users/
 - Build swagger CLI plugin'ini ishlatmaydi, shuning uchun DTO va javob class'larining har bir maydoniga `@ApiProperty()` / `@ApiPropertyOptional()` yoziladi.
 - **Chiquvchi javob** shakllari (frontend ham ishlatadigan interface'lar) `packages/types/src/lib/` da saqlanadi va `@nestjs-template/types` dan `import type` bilan olinadi.
 - `packages/types` da faqat sof TypeScript bo'ladi. U yerda NestJS, class-validator yoki `@prisma/client` importlari bo'lmaydi.
-- Prisma model obyektini to'g'ridan-to'g'ri qaytarmang, ayniqsa `password`/`passwordHash` kabi maydonlar bo'lsa. Service umumiy type'ga map qilib qaytaradi.
+- Prisma model obyektini to'g'ridan-to'g'ri qaytarmang, ayniqsa `password`/`refresh_token_hash` kabi maydonlar bo'lsa. Service umumiy type'ga map qilib qaytaradi.
 - `class-validator` / `class-transformer` o'rnatilgan, global `ValidationPipe` `main.ts` da `common/pipes/validation.ts` dagi umumiy sozlamalar bilan ulangan.
 
 ## Xatolar va HTTP

@@ -31,10 +31,10 @@ export class AuthService {
     }
 
     const user = await this.usersService.createRecord({
-      fullName: dto.fullName,
+      full_name: dto.full_name,
       phone: dto.phone,
       email: dto.email ?? null,
-      passwordHash: await argon2.hash(dto.password),
+      password: await argon2.hash(dto.password),
     });
     this.logger.log(`User ${user.id} registered`);
     return this.signIn(user);
@@ -42,7 +42,7 @@ export class AuthService {
 
   async login(dto: LoginDto): Promise<AuthResponse> {
     const user = await this.usersService.findByPhone(dto.phone);
-    if (!user || !(await argon2.verify(user.passwordHash, dto.password))) {
+    if (!user || !(await argon2.verify(user.password, dto.password))) {
       throw new UnauthorizedException(INVALID_CREDENTIALS);
     }
     this.assertActive(user);
@@ -53,26 +53,26 @@ export class AuthService {
   async refresh(refreshToken: string): Promise<AuthTokens> {
     const payload = await this.verifyRefreshToken(refreshToken);
     const user = await this.usersService.findByIdOrNull(payload.sub);
-    if (!user?.refreshTokenHash || !(await argon2.verify(user.refreshTokenHash, refreshToken))) {
+    if (!user?.refresh_token_hash || !(await argon2.verify(user.refresh_token_hash, refreshToken))) {
       throw new UnauthorizedException(INVALID_REFRESH_TOKEN);
     }
     this.assertActive(user);
 
     const tokens = await this.issueTokens(user);
-    await this.usersService.updateRecord(user.id, { refreshTokenHash: await argon2.hash(tokens.refreshToken) });
+    await this.usersService.updateRecord(user.id, { refresh_token_hash: await argon2.hash(tokens.refresh_token) });
     return tokens;
   }
 
   /** Revokes the user's refresh token. Access tokens stay valid until they expire. */
   async logout(userId: string): Promise<void> {
-    await this.usersService.updateRecord(userId, { refreshTokenHash: null });
+    await this.usersService.updateRecord(userId, { refresh_token_hash: null });
   }
 
   private async signIn(user: UserRecord): Promise<AuthResponse> {
     const tokens = await this.issueTokens(user);
     const updated = await this.usersService.updateRecord(user.id, {
-      refreshTokenHash: await argon2.hash(tokens.refreshToken),
-      lastLoginAt: new Date(),
+      refresh_token_hash: await argon2.hash(tokens.refresh_token),
+      last_login_at: new Date(),
     });
     return { user: toUserResponse(updated), tokens };
   }
@@ -91,11 +91,11 @@ export class AuthService {
       }),
     ]);
     return {
-      accessToken,
-      refreshToken,
-      tokenType: 'Bearer',
-      expiresIn: envs.JWT_ACCESS_EXPIRES_IN,
-      refreshExpiresIn: envs.JWT_REFRESH_EXPIRES_IN,
+      access_token: accessToken,
+      refresh_token: refreshToken,
+      token_type: 'Bearer',
+      expires_in: envs.JWT_ACCESS_EXPIRES_IN,
+      refresh_expires_in: envs.JWT_REFRESH_EXPIRES_IN,
     };
   }
 
@@ -113,6 +113,6 @@ export class AuthService {
   }
 
   private assertActive(user: UserRecord): void {
-    if (!user.isActive) throw new ForbiddenException('Account is disabled');
+    if (!user.is_active) throw new ForbiddenException('Account is disabled');
   }
 }

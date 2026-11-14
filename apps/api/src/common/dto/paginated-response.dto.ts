@@ -7,9 +7,9 @@ export class PaginationMetaDto implements PaginationMeta {
   @ApiProperty() page!: number;
   @ApiProperty() limit!: number;
   @ApiProperty() total!: number;
-  @ApiProperty() totalPages!: number;
-  @ApiProperty() hasNext!: boolean;
-  @ApiProperty() hasPrev!: boolean;
+  @ApiProperty() total_pages!: number;
+  @ApiProperty() has_next!: boolean;
+  @ApiProperty() has_prev!: boolean;
 }
 
 /** Documents a `PaginatedResponse<model>` 200 response in Swagger. */
