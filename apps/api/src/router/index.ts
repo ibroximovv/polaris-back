@@ -1,6 +1,11 @@
 import { Module, type Type } from '@nestjs/common';
 import { RouterModule, type RouteTree, type Routes } from '@nestjs/core';
 import { AuthModule } from '../modules/auth/auth.module';
+import { CourseModulesModule } from '../modules/course-modules/course-modules.module';
+import { CoursesModule } from '../modules/courses/courses.module';
+import { LessonTestsModule } from '../modules/lesson-tests/lesson-tests.module';
+import { LessonsModule } from '../modules/lessons/lessons.module';
+import { ProgressModule } from '../modules/progress/progress.module';
 import { UsersModule } from '../modules/users/users.module';
 
 /**
@@ -25,6 +30,11 @@ export const appRoutes: Routes = [
     children: [
       { path: 'auth', module: AuthModule },
       { path: 'users', module: UsersModule },
+      { path: 'courses', module: CoursesModule },
+      { path: 'modules', module: CourseModulesModule },
+      { path: 'lessons', module: LessonsModule },
+      { path: 'tests', module: LessonTestsModule },
+      { path: 'progress', module: ProgressModule },
     ],
   },
 ];

@@ -30,6 +30,7 @@ apps/
     tsdown.config.mts     build (oxc/rolldown) -> dist/apps/api/main.cjs
     Dockerfile            multi-stage, `nx run api:prune`
   api-e2e/                Jest + axios e2e testlar (ishlab turgan serverga so'rov yuboradi)
+docs/                     loyiha hujjatlari (talablar PDF, o'qish jarayoni), indeks: docs/README.md
 packages/
   types/                  umumiy interface/type'lar, import: `@nestjs-template/types` (tags: scope:shared)
 ```
@@ -44,9 +45,16 @@ packages/
 | ----- | ----- | ---- |
 | `auth` | tayyor | phone + password, JWT access + refresh (rotation). Global `JwtAuthGuard`, ochiq route'lar `@Public()` bilan belgilanadi. SMS tasdiqlash hali yo'q |
 | `users` | tayyor (minimal) | `User` modeli, `GET /users/me`. Admin CRUD hali yo'q |
+| `courses` | tayyor | kurs CRUD (admin), ro'yxat va kurs tuzilmasi (talaba faqat `is_published`) |
+| `course-modules` | tayyor | kurs modullari CRUD (faqat admin), route `/modules` |
+| `lessons` | tayyor | dars (video, qo'llanma, materiallar). Talabaga qulflangan dars 403 |
+| `lesson-tests` | tayyor | har dars uchun bitta test, savollar, urinishlar. Baholash faqat serverda, route `/tests` |
+| `progress` | tayyor | video aniq ko'rilgan soniyalar, darslarni ketma-ket ochish, talaba va admin ko'rsatkichlari. Qoidalar: `docs/learning-flow.md` |
 | `todos` | namuna | shablondan qolgan, domen emas, keyin o'chiriladi |
 
 Yangi modul qo'shilganda shu jadval yangilanadi.
+
+Rollar: global `RolesGuard` (`JwtAuthGuard` dan keyin). Admin route'lar `@Roles('ADMIN')` bilan belgilanadi, belgilanmagan route har qanday tizimga kirgan foydalanuvchiga ochiq.
 
 ### Konfiguratsiya va loglar
 
