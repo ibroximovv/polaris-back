@@ -9,12 +9,9 @@ import {
   Patch,
   Post,
 } from '@nestjs/common';
-import type {
-  CreateTodoDto,
-  Todo,
-  TodoListResponse,
-  UpdateTodoDto,
-} from '@nestjs-template/types';
+import type { Todo, TodoListResponse } from '@nestjs-template/types';
+import { CreateTodoDto } from './dto/create-todo.dto';
+import { UpdateTodoDto } from './dto/update-todo.dto';
 import { TodosService } from './todos.service';
 import { Public } from '../modules/auth/decorators/public.decorator';
 
