@@ -1,8 +1,8 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsNumber, IsOptional, Min } from 'class-validator';
+import { IsNumber, IsOptional, IsUUID, Min } from 'class-validator';
 
 /**
- * One heartbeat from the video player: the part of the video played since the previous
+ * One heartbeat from the video player (HTTP, or the socket.io `progress:watch` event): the part of the video played since the previous
  * heartbeat (`from`..`to`, seconds) and the current position. Send it every ~10-15 seconds
  * while playing, and on pause/seek/close.
  */
@@ -22,4 +22,18 @@ export class RecordWatchDto {
   @IsNumber()
   @Min(0)
   position?: number;
+}
+
+/** socket.io `progress:watch` payload: the heartbeat plus the lesson. */
+export class WatchEventDto extends RecordWatchDto {
+  @ApiProperty({ format: 'uuid' })
+  @IsUUID()
+  lesson_id!: string;
+}
+
+/** socket.io `progress:get` payload. */
+export class LessonRefDto {
+  @ApiProperty({ format: 'uuid' })
+  @IsUUID()
+  lesson_id!: string;
 }

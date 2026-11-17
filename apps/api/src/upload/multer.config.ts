@@ -27,6 +27,15 @@ export function generateFileName(originalName: string): string {
   return `${Date.now()}-${randomUUID()}${ext}`;
 }
 
+/**
+ * Busboy reads multipart file names as latin1; browsers send UTF-8. Re-decodes so names like
+ * "Dars 1 — konspekt.pdf" or Cyrillic names survive.
+ */
+export function decodeOriginalName(name: string): string {
+  const decoded = Buffer.from(name, 'latin1').toString('utf8');
+  return decoded.includes('\uFFFD') ? name : decoded;
+}
+
 /** Global multer defaults (disk storage, size/count limits, MIME allow-list) taken from UPLOAD_* envs. */
 export function createMulterOptions(config: UploadEnvs = envs): MulterOptions {
   return {

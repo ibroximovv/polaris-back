@@ -15,6 +15,7 @@ describe('LessonTestsController', () => {
     addQuestion: jest.fn(),
     updateQuestion: jest.fn(),
     removeQuestion: jest.fn(),
+    setPoints: jest.fn(),
   };
   const user: AuthUser = { id: 'u1', role: 'USER' };
   let controller: LessonTestsController;
@@ -45,6 +46,7 @@ describe('LessonTestsController', () => {
     service.addQuestion.mockResolvedValue('added');
     service.updateQuestion.mockResolvedValue('edited');
     service.getAttemptHistory.mockResolvedValue('history');
+    service.setPoints.mockResolvedValue('points');
     const question = { text: 'Q', options: [] };
     await expect(controller.findFull('t1')).resolves.toBe('full');
     await expect(controller.create({ lesson_id: 'l1' })).resolves.toBe('created');
@@ -52,6 +54,8 @@ describe('LessonTestsController', () => {
     await expect(controller.addQuestion('t1', question)).resolves.toBe('added');
     await expect(controller.updateQuestion('q1', { text: 'x' })).resolves.toBe('edited');
     await expect(controller.userAttempts('t1', 'u2')).resolves.toBe('history');
+    await expect(controller.setPoints('t1', { total_points: 100 })).resolves.toBe('points');
+    expect(service.setPoints).toHaveBeenCalledWith('t1', { total_points: 100 });
     await controller.remove('t1');
     await controller.removeQuestion('q1');
     expect(service.remove).toHaveBeenCalledWith('t1');

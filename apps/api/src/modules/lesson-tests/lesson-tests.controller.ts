@@ -9,6 +9,7 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Put,
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
@@ -40,6 +41,7 @@ import {
   TestAttemptHistoryDto,
   TestAttemptResultDto,
 } from './dto/lesson-test-response.dto';
+import { SetTestPointsDto } from './dto/set-test-points.dto';
 import { SubmitAttemptDto } from './dto/submit-attempt.dto';
 import { LessonTestsService } from './lesson-tests.service';
 
@@ -115,7 +117,7 @@ export class LessonTestsController {
 
   @Patch(':id')
   @Roles('ADMIN')
-  @ApiOperation({ summary: 'Admin: update test settings (title, pass_score, max_attempts)' })
+  @ApiOperation({ summary: 'Admin: update test settings (title, total_points, pass_score, max_attempts)' })
   @ApiOkResponse({ type: LessonTestAdminDto })
   @ApiNotFoundResponse()
   update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateLessonTestDto): Promise<LessonTestAdmin> {
@@ -130,6 +132,19 @@ export class LessonTestsController {
   @ApiNotFoundResponse()
   remove(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
     return this.testsService.remove(id);
+  }
+
+  @Put(':id/points')
+  @Roles('ADMIN')
+  @ApiOperation({
+    summary:
+      'Admin: set the lesson total and question points at once. Questions without points share the rest evenly',
+  })
+  @ApiOkResponse({ type: LessonTestAdminDto })
+  @ApiBadRequestResponse({ description: 'Points exceed the total or leave 0 for an automatic question' })
+  @ApiNotFoundResponse()
+  setPoints(@Param('id', ParseUUIDPipe) id: string, @Body() dto: SetTestPointsDto): Promise<LessonTestAdmin> {
+    return this.testsService.setPoints(id, dto);
   }
 
   @Post(':id/questions')

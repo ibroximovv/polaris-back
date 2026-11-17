@@ -2,7 +2,13 @@ import type { QuestionWithOptions, TestWithQuestions } from './lesson-tests.util
 
 const date = new Date('2026-01-01T00:00:00.000Z');
 
-export function makeQuestion(id: string, correct: string[], all: string[], points = 1, position = 0): QuestionWithOptions {
+export function makeQuestion(
+  id: string,
+  correct: string[],
+  all: string[],
+  points: number | null = 1,
+  position = 0,
+): QuestionWithOptions {
   return {
     id,
     test_id: 't1',
@@ -23,12 +29,14 @@ export function makeQuestion(id: string, correct: string[], all: string[], point
   };
 }
 
-/** q1: single answer (a), 1 point. q2: two answers (c, d), 3 points. */
+/** q1: single answer (a), 1 point. q2: two answers (c, d), 3 points. Total 4. */
 export function makeTest(overrides: Partial<TestWithQuestions> = {}): TestWithQuestions {
   return {
     id: 't1',
     lesson_id: 'l1',
+    module_id: null,
     title: 'Lesson 1 test',
+    total_points: 4,
     pass_score: 70,
     max_attempts: null,
     created_at: date,

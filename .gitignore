@@ -45,9 +45,10 @@ Thumbs.db
 .claude/settings.local.json
 
 .nx/polygraph
-# local env and uploaded files
+# local env and uploaded files (multer temp dir, UPLOAD_DIR relative to the process cwd)
 .env
-uploads
+/uploads/
+/apps/api/uploads/
 
 # generated Prisma client (npx prisma generate)
 apps/api/src/generated

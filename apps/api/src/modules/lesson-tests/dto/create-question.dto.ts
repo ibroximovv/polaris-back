@@ -40,12 +40,18 @@ export class CreateQuestionDto {
   @MaxLength(2000)
   text!: string;
 
-  @ApiPropertyOptional({ minimum: 1, maximum: 100, default: 1 })
+  @ApiPropertyOptional({
+    type: Number,
+    nullable: true,
+    minimum: 1,
+    maximum: 10000,
+    description: 'Explicit points. Omit or null = an even share of what the test total leaves (default rule)',
+  })
   @IsOptional()
   @IsInt()
   @Min(1)
-  @Max(100)
-  points?: number;
+  @Max(10000)
+  points?: number | null;
 
   @ApiPropertyOptional({ minimum: 0, description: 'Defaults to the index in the list' })
   @IsOptional()

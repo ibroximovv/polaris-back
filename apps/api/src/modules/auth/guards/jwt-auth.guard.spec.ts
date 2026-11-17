@@ -9,7 +9,17 @@ function contextFor(request: Partial<AuthenticatedRequest>): ExecutionContext {
   return {
     getHandler: () => () => undefined,
     getClass: () => class {},
+    getType: () => 'http',
     switchToHttp: () => ({ getRequest: () => request }),
+  } as unknown as ExecutionContext;
+}
+
+function wsContextFor(data: unknown): ExecutionContext {
+  return {
+    getHandler: () => () => undefined,
+    getClass: () => class {},
+    getType: () => 'ws',
+    switchToWs: () => ({ getClient: () => ({ data }) }),
   } as unknown as ExecutionContext;
 }
 
@@ -53,6 +63,12 @@ describe('JwtAuthGuard', () => {
     await expect(guard.canActivate(contextFor({ headers: { authorization: 'Bearer r' } }))).rejects.toThrow(
       UnauthorizedException,
     );
+  });
+
+  it('lets websocket handlers through (sockets are authenticated by the namespace middleware)', async () => {
+    reflector.getAllAndOverride.mockReturnValue(false);
+    await expect(guard.canActivate(wsContextFor({}))).resolves.toBe(true);
+    expect(jwtService.verifyAsync).not.toHaveBeenCalled();
   });
 });
 

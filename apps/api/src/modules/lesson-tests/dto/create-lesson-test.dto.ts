@@ -1,4 +1,4 @@
-import { ApiProperty, ApiPropertyOptional, OmitType, PartialType } from '@nestjs/swagger';
+import { ApiPropertyOptional, OmitType, PartialType } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
   ArrayMaxSize,
@@ -15,15 +15,36 @@ import {
 import { CreateQuestionDto } from './create-question.dto';
 
 export class CreateLessonTestDto {
-  @ApiProperty({ format: 'uuid', description: 'A lesson has at most one test' })
+  @ApiPropertyOptional({ format: 'uuid', description: 'Lesson test: send lesson_id (a lesson has at most one test)' })
+  @IsOptional()
   @IsUUID()
-  lesson_id!: string;
+  lesson_id?: string;
+
+  @ApiPropertyOptional({
+    format: 'uuid',
+    description: "Module final test: send module_id instead (a module has at most one). It opens after the module's lessons",
+  })
+  @IsOptional()
+  @IsUUID()
+  module_id?: string;
 
   @ApiPropertyOptional({ type: String, nullable: true })
   @IsOptional()
   @IsString()
   @MaxLength(200)
   title?: string | null;
+
+  @ApiPropertyOptional({
+    minimum: 1,
+    maximum: 10000,
+    default: 100,
+    description: 'Points the lesson is worth. Questions without explicit points share what is left evenly',
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(10000)
+  total_points?: number;
 
   @ApiPropertyOptional({ minimum: 0, maximum: 100, default: 70, description: 'Percent needed to pass' })
   @IsOptional()
@@ -49,5 +70,5 @@ export class CreateLessonTestDto {
 
 /** Test settings only; questions are edited through their own routes. */
 export class UpdateLessonTestDto extends PartialType(
-  OmitType(CreateLessonTestDto, ['lesson_id', 'questions'] as const),
+  OmitType(CreateLessonTestDto, ['lesson_id', 'module_id', 'questions'] as const),
 ) {}

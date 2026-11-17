@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import type { Lesson, LessonDetail, LessonMaterial, LessonTestSummary } from '@nestjs-template/types';
+import type { Lesson, LessonDetail, TestKind, TestSummary } from '@nestjs-template/types';
+import { LessonMaterialDto, LessonVideoDto } from './lesson-media-response.dto';
 
 export class LessonDto implements Lesson {
   @ApiProperty({ format: 'uuid' }) id!: string;
@@ -7,30 +8,25 @@ export class LessonDto implements Lesson {
   @ApiProperty() title!: string;
   @ApiPropertyOptional({ type: String, nullable: true }) description!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) content!: string | null;
-  @ApiPropertyOptional({ type: String, nullable: true }) video_url!: string | null;
-  @ApiPropertyOptional({ type: Number, nullable: true }) video_duration!: number | null;
   @ApiProperty() position!: number;
   @ApiProperty({ format: 'date-time' }) created_at!: string;
   @ApiProperty({ format: 'date-time' }) updated_at!: string;
 }
 
-export class LessonMaterialDto implements LessonMaterial {
+/** Shared by lessons and course outlines. */
+export class TestSummaryDto implements TestSummary {
   @ApiProperty({ format: 'uuid' }) id!: string;
-  @ApiProperty({ format: 'uuid' }) lesson_id!: string;
-  @ApiProperty() title!: string;
-  @ApiProperty() url!: string;
-  @ApiProperty() position!: number;
-}
-
-export class LessonTestSummaryDto implements LessonTestSummary {
-  @ApiProperty({ format: 'uuid' }) id!: string;
+  @ApiProperty({ enum: ['LESSON', 'MODULE'] }) kind!: TestKind;
   @ApiPropertyOptional({ type: String, nullable: true }) title!: string | null;
+  @ApiProperty({ description: 'Points the test is worth' }) total_points!: number;
   @ApiProperty() pass_score!: number;
   @ApiPropertyOptional({ type: Number, nullable: true }) max_attempts!: number | null;
   @ApiProperty() question_count!: number;
 }
 
 export class LessonDetailDto extends LessonDto implements LessonDetail {
-  @ApiProperty({ type: [LessonMaterialDto] }) materials!: LessonMaterialDto[];
-  @ApiPropertyOptional({ type: LessonTestSummaryDto, nullable: true }) test!: LessonTestSummaryDto | null;
+  @ApiPropertyOptional({ type: LessonVideoDto, nullable: true }) video!: LessonVideoDto | null;
+  @ApiProperty({ type: [LessonMaterialDto], description: 'Guide files and images in display order' })
+  materials!: LessonMaterialDto[];
+  @ApiPropertyOptional({ type: TestSummaryDto, nullable: true }) test!: TestSummaryDto | null;
 }

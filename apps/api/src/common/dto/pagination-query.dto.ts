@@ -11,14 +11,16 @@ export const MAX_PAGE_SIZE = 100;
  * `export class TourQueryDto extends PaginationQueryDto { @IsOptional() @IsString() city?: string }`
  */
 export class PaginationQueryDto {
-  @ApiPropertyOptional({ minimum: 1, default: 1 })
+  // Explicit `type`: without it Swagger reads decorator metadata, which is `Object` for a property
+  // whose type is only inferred from its initializer (shown as a JSON editor instead of a number).
+  @ApiPropertyOptional({ type: Number, minimum: 1, default: 1 })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(1)
   page = 1;
 
-  @ApiPropertyOptional({ minimum: 1, maximum: MAX_PAGE_SIZE, default: DEFAULT_PAGE_SIZE })
+  @ApiPropertyOptional({ type: Number, minimum: 1, maximum: MAX_PAGE_SIZE, default: DEFAULT_PAGE_SIZE })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
@@ -32,7 +34,7 @@ export class PaginationQueryDto {
   @MaxLength(64)
   sort_by?: string;
 
-  @ApiPropertyOptional({ enum: ['asc', 'desc'], default: 'desc' })
+  @ApiPropertyOptional({ type: String, enum: ['asc', 'desc'], default: 'desc' })
   @IsOptional()
   @IsIn(['asc', 'desc'])
   sort_order: SortOrder = 'desc';

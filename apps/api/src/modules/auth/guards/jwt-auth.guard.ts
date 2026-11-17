@@ -23,6 +23,8 @@ export class JwtAuthGuard implements CanActivate {
       context.getClass(),
     ]);
     if (isPublic) return true;
+    // socket.io connections are authenticated once by the namespace middleware (src/realtime).
+    if (context.getType() === 'ws') return true;
 
     const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
     const token = extractBearerToken(request.headers.authorization);

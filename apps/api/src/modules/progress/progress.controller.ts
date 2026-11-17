@@ -8,6 +8,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import type {
+  CourseTestStats,
   CourseProgress,
   CourseStudentProgress,
   LessonProgress,
@@ -20,14 +21,19 @@ import type { AuthUser } from '../auth/auth.types';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { CourseProgressDto, CourseStudentProgressDto, LessonProgressDto } from './dto/progress-response.dto';
+import { CourseTestStatsDto } from './dto/progress-stats-response.dto';
 import { RecordWatchDto } from './dto/record-watch.dto';
+import { ProgressStatsService } from './progress-stats.service';
 import { ProgressService } from './progress.service';
 
 @ApiTags('progress')
 @ApiBearerAuth(BEARER_AUTH)
 @Controller()
 export class ProgressController {
-  constructor(private readonly progressService: ProgressService) {}
+  constructor(
+    private readonly progressService: ProgressService,
+    private readonly statsService: ProgressStatsService,
+  ) {}
 
   @Get('lessons/:lessonId')
   @ApiOperation({ summary: 'My progress in a lesson' })
@@ -39,7 +45,7 @@ export class ProgressController {
 
   @Post('lessons/:lessonId/watch')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Report a watched video segment (player heartbeat)' })
+  @ApiOperation({ summary: 'Report a watched video segment (player heartbeat). Prefer the socket.io progress:watch event' })
   @ApiOkResponse({ type: LessonProgressDto })
   @ApiForbiddenResponse({ description: 'Lesson is locked' })
   watch(
@@ -65,6 +71,27 @@ export class ProgressController {
   @ApiNotFoundResponse()
   course(@CurrentUser() user: AuthUser, @Param('courseId', ParseUUIDPipe) courseId: string): Promise<CourseProgress> {
     return this.progressService.getCourseProgress(user, courseId);
+  }
+
+  @Get('courses/:courseId/stats')
+  @ApiOperation({ summary: 'My test statistics in a course: per test, per module and totals' })
+  @ApiOkResponse({ type: CourseTestStatsDto })
+  @ApiNotFoundResponse()
+  stats(@CurrentUser() user: AuthUser, @Param('courseId', ParseUUIDPipe) courseId: string): Promise<CourseTestStats> {
+    return this.statsService.getCourseTestStats(user, courseId);
+  }
+
+  @Get('courses/:courseId/students/:userId/stats')
+  @Roles('ADMIN')
+  @ApiOperation({ summary: "Admin: a student's test statistics in a course" })
+  @ApiOkResponse({ type: CourseTestStatsDto })
+  @ApiNotFoundResponse()
+  studentStats(
+    @CurrentUser() user: AuthUser,
+    @Param('courseId', ParseUUIDPipe) courseId: string,
+    @Param('userId', ParseUUIDPipe) userId: string,
+  ): Promise<CourseTestStats> {
+    return this.statsService.getCourseTestStats(user, courseId, userId);
   }
 
   @Get('courses/:courseId/students')

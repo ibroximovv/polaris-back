@@ -1,6 +1,7 @@
 import { type CanActivate, type ExecutionContext, ForbiddenException, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import type { UserRole } from '@nestjs-template/types';
+import type { AuthUser } from '../auth.types';
 import type { AuthenticatedRequest } from '../decorators/current-user.decorator';
 import { ROLES_KEY } from '../decorators/roles.decorator';
 
@@ -19,7 +20,10 @@ export class RolesGuard implements CanActivate {
     ]);
     if (!roles || roles.length === 0) return true;
 
-    const user = context.switchToHttp().getRequest<AuthenticatedRequest>().user;
+    const user: AuthUser | undefined =
+      context.getType() === 'ws'
+        ? context.switchToWs().getClient<{ data?: { user?: AuthUser } }>().data?.user
+        : context.switchToHttp().getRequest<AuthenticatedRequest>().user;
     if (!user || !roles.includes(user.role)) {
       throw new ForbiddenException('You do not have permission to perform this action');
     }

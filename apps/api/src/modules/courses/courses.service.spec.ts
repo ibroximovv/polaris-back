@@ -79,7 +79,27 @@ describe('CoursesService', () => {
           position: 0,
           created_at: date,
           updated_at: date,
-          lessons: [{ id: 'l1', title: 'Lesson', position: 0, video_duration: 60, test: { id: 't1' } }],
+          lessons: [
+            {
+              id: 'l1',
+              title: 'Lesson',
+              position: 0,
+              video: { duration: 60 },
+              test: { id: 't1', total_points: 100 },
+            },
+          ],
+          test: {
+            id: 'mt1',
+            lesson_id: null,
+            module_id: 'm1',
+            title: 'Final',
+            total_points: 50,
+            pass_score: 70,
+            max_attempts: null,
+            created_at: date,
+            updated_at: date,
+            _count: { questions: 10 },
+          },
         },
       ],
     };
@@ -88,8 +108,17 @@ describe('CoursesService', () => {
       prisma.course.findUnique.mockResolvedValue(detail);
       const result = await service.findDetail(student, 'c1');
       expect(result.modules[0].lessons).toEqual([
-        { id: 'l1', title: 'Lesson', position: 0, video_duration: 60, has_test: true },
+        { id: 'l1', title: 'Lesson', position: 0, has_video: true, video_duration: 60, has_test: true },
       ]);
+      expect(result.modules[0].test).toEqual({
+        id: 'mt1',
+        kind: 'MODULE',
+        title: 'Final',
+        total_points: 50,
+        pass_score: 70,
+        max_attempts: null,
+        question_count: 10,
+      });
     });
 
     it('hides unpublished courses from students', async () => {

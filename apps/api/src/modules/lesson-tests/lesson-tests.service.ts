@@ -19,10 +19,14 @@ import { ProgressService } from '../progress/progress.service';
 import { hasVideo } from '../progress/progress.utils';
 import type { CreateLessonTestDto, UpdateLessonTestDto } from './dto/create-lesson-test.dto';
 import type { CreateOptionDto, CreateQuestionDto, UpdateQuestionDto } from './dto/create-question.dto';
+import type { SetTestPointsDto } from './dto/set-test-points.dto';
 import type { SubmitAttemptDto } from './dto/submit-attempt.dto';
 import {
   assertValidOptions,
+  DEFAULT_TEST_TOTAL_POINTS,
   gradeAttempt,
+  type QuestionPointsInput,
+  resolveQuestionPoints,
   type TestWithQuestions,
   toAdminTest,
   toAttemptSummary,
@@ -43,7 +47,7 @@ function questionData(question: CreateQuestionDto, index: number) {
   assertValidOptions(question.options);
   return {
     text: question.text,
-    points: question.points ?? 1,
+    points: question.points ?? null,
     position: question.position ?? index,
     options: { create: optionsData(question.options) },
   };
@@ -87,14 +91,35 @@ export class LessonTestsService extends BaseService<
     super(createTestRepository(prisma));
   }
 
+  /** Creates a lesson test (`lesson_id`) or a module's final test (`module_id`). */
   async createTest(dto: CreateLessonTestDto): Promise<LessonTestAdmin> {
-    const lesson = await this.prisma.lesson.findUnique({ where: { id: dto.lesson_id }, select: { id: true } });
-    if (!lesson) throw new NotFoundException(`Lesson #${dto.lesson_id} not found`);
-    const created = await this.create(dto); // P2002 (lesson already has a test) -> 409
+    if (Boolean(dto.lesson_id) === Boolean(dto.module_id)) {
+      throw new BadRequestException('Send exactly one of lesson_id (lesson test) or module_id (module test)');
+    }
+    if (dto.lesson_id) {
+      const lesson = await this.prisma.lesson.findUnique({ where: { id: dto.lesson_id }, select: { id: true } });
+      if (!lesson) throw new NotFoundException(`Lesson #${dto.lesson_id} not found`);
+    } else {
+      const module = await this.prisma.courseModule.findUnique({ where: { id: dto.module_id }, select: { id: true } });
+      if (!module) throw new NotFoundException(`Module #${dto.module_id} not found`);
+    }
+    resolveQuestionPoints(
+      dto.total_points ?? DEFAULT_TEST_TOTAL_POINTS,
+      (dto.questions ?? []).map((question, index) => ({
+        id: `new-${index}`,
+        points: question.points ?? null,
+        position: question.position ?? index,
+      })),
+    );
+    const created = await this.create(dto); // P2002 (the lesson/module already has a test) -> 409
     return this.getAdminTest(created.id);
   }
 
   async updateTest(id: string, dto: UpdateLessonTestDto): Promise<LessonTestAdmin> {
+    if (dto.total_points !== undefined) {
+      const test = await this.findTestOrFail(id);
+      resolveQuestionPoints(dto.total_points, test.questions);
+    }
     await this.update(id, dto);
     return this.getAdminTest(id);
   }
@@ -103,18 +128,22 @@ export class LessonTestsService extends BaseService<
     return toAdminTest(await this.findTestOrFail(id));
   }
 
-  /** Student view. The lesson must be open; correct answers are stripped. */
+  /** Student view; correct answers are stripped. The lesson (or, for a module test, the module's lessons) must be done. */
   async getPublicTest(user: AuthUser, id: string): Promise<LessonTestPublic> {
     const test = await this.findTestOrFail(id);
-    await this.progressService.assertLessonOpen(user, test.lesson_id);
+    if (test.module_id) await this.progressService.assertModuleTestOpen(user, test.module_id);
+    else await this.progressService.assertLessonOpen(user, test.lesson_id ?? '');
     return toPublicTest(test);
   }
 
   async addQuestion(testId: string, dto: CreateQuestionDto): Promise<LessonTestAdmin> {
     const test = await this.findTestOrFail(testId);
-    await this.prisma.testQuestion.create({
-      data: { test_id: testId, ...questionData(dto, test.questions.length) },
-    });
+    const data = questionData(dto, test.questions.length);
+    resolveQuestionPoints(test.total_points, [
+      ...test.questions,
+      { id: 'new', points: data.points, position: data.position },
+    ]);
+    await this.prisma.testQuestion.create({ data: { test_id: testId, ...data } });
     return this.getAdminTest(testId);
   }
 
@@ -122,6 +151,13 @@ export class LessonTestsService extends BaseService<
     const question = await this.findQuestionOrFail(questionId);
     const { options, ...fields } = dto;
     if (options) assertValidOptions(options);
+    if (fields.points !== undefined) {
+      const test = await this.findTestOrFail(question.test_id);
+      resolveQuestionPoints(
+        test.total_points,
+        test.questions.map((item) => (item.id === questionId ? { ...item, points: fields.points ?? null } : item)),
+      );
+    }
     await this.prisma.$transaction(async (tx) => {
       await tx.testQuestion.update({ where: { id: questionId }, data: fields });
       if (options) {
@@ -134,6 +170,34 @@ export class LessonTestsService extends BaseService<
     return this.getAdminTest(question.test_id);
   }
 
+  /**
+   * Sets the lesson's total points and/or explicit question points at once. The whole result is
+   * validated with the default rule before anything is saved.
+   */
+  async setPoints(testId: string, dto: SetTestPointsDto): Promise<LessonTestAdmin> {
+    const test = await this.findTestOrFail(testId);
+    const changes = new Map((dto.questions ?? []).map((item) => [item.question_id, item.points ?? null]));
+    if (changes.size !== (dto.questions ?? []).length) {
+      throw new BadRequestException('Each question may be listed only once');
+    }
+    const unknown = [...changes.keys()].find((id) => !test.questions.some((question) => question.id === id));
+    if (unknown) throw new BadRequestException(`Question #${unknown} is not part of test #${testId}`);
+
+    const total = dto.total_points ?? test.total_points;
+    const next: QuestionPointsInput[] = test.questions.map((question) => ({
+      id: question.id,
+      position: question.position,
+      points: changes.has(question.id) ? (changes.get(question.id) ?? null) : question.points,
+    }));
+    resolveQuestionPoints(total, next);
+
+    await this.prisma.$transaction([
+      this.prisma.lessonTest.update({ where: { id: testId }, data: { total_points: total } }),
+      ...[...changes].map(([id, points]) => this.prisma.testQuestion.update({ where: { id }, data: { points } })),
+    ]);
+    return this.getAdminTest(testId);
+  }
+
   async removeQuestion(questionId: string): Promise<void> {
     await this.findQuestionOrFail(questionId);
     await this.prisma.testQuestion.delete({ where: { id: questionId } });
@@ -141,10 +205,7 @@ export class LessonTestsService extends BaseService<
 
   async submitAttempt(user: AuthUser, testId: string, dto: SubmitAttemptDto): Promise<TestAttemptResult> {
     const test = await this.findTestOrFail(testId);
-    const { lesson, record } = await this.progressService.assertLessonOpen(user, test.lesson_id);
-    if (hasVideo(lesson) && !record?.video_completed_at && user.role !== 'ADMIN') {
-      throw new BadRequestException('Watch the lesson video before taking the test');
-    }
+    const applyResult = await this.openForAttempt(user, test);
     if (test.questions.length === 0) throw new BadRequestException(`Test #${testId} has no questions yet`);
 
     if (test.max_attempts !== null) {
@@ -154,7 +215,7 @@ export class LessonTestsService extends BaseService<
       }
     }
 
-    const graded = gradeAttempt(test.questions, dto.answers, test.pass_score);
+    const graded = gradeAttempt(test.questions, dto.answers, test.pass_score, test.total_points);
     const attempt = await this.prisma.testAttempt.create({
       data: {
         test_id: testId,
@@ -173,7 +234,7 @@ export class LessonTestsService extends BaseService<
         },
       },
     });
-    await this.progressService.applyTestResult(user.id, lesson, graded.percent, graded.passed);
+    await applyResult(graded.percent, graded.passed);
 
     return {
       ...toAttemptSummary(attempt),
@@ -193,6 +254,7 @@ export class LessonTestsService extends BaseService<
     const best = attempts.reduce<number | null>((max, item) => (max === null || item.percent > max ? item.percent : max), null);
     return {
       test_id: testId,
+      total_points: test.total_points,
       pass_score: test.pass_score,
       max_attempts: test.max_attempts,
       attempts_used: attempts.length,
@@ -201,6 +263,26 @@ export class LessonTestsService extends BaseService<
       passed: attempts.some((item) => item.passed),
       attempts: attempts.map(toAttemptSummary),
     };
+  }
+
+  /**
+   * Checks the student may take the test now and returns how to record the result:
+   * a lesson test needs the open lesson with its video watched; a module test needs every lesson
+   * of the module completed.
+   */
+  private async openForAttempt(
+    user: AuthUser,
+    test: TestWithQuestions,
+  ): Promise<(percent: number, passed: boolean) => Promise<unknown>> {
+    if (test.module_id) {
+      const context = await this.progressService.assertModuleTestOpen(user, test.module_id);
+      return (percent, passed) => this.progressService.applyModuleTestResult(user.id, context, percent, passed);
+    }
+    const context = await this.progressService.assertLessonOpen(user, test.lesson_id ?? '');
+    if (hasVideo(context.lesson) && !context.record?.video_completed_at && user.role !== 'ADMIN') {
+      throw new BadRequestException('Watch the lesson video before taking the test');
+    }
+    return (percent, passed) => this.progressService.applyTestResult(user.id, context, percent, passed);
   }
 
   private async findTestOrFail(id: string): Promise<TestWithQuestions> {

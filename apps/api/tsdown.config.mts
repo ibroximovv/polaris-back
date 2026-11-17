@@ -25,4 +25,7 @@ export default defineConfig({
   alias: {
     '@nestjs-template/types': join(here, '../../packages/types/src/index.ts'),
   },
+  // The shared lib is a workspace package (listed in package.json), so it would be left external;
+  // it also exports runtime constants (e.g. LEARNING_WS_EVENTS), so it must be bundled.
+  deps: { alwaysBundle: ['@nestjs-template/types'] },
 });

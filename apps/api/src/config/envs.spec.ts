@@ -21,12 +21,26 @@ describe('parseEnvs', () => {
   });
 
   it('switches to safer defaults in production', () => {
-    const envs = parseEnvs({ ...required, NODE_ENV: 'production' });
+    const envs = parseEnvs({ ...required, NODE_ENV: 'production', MINIO_ACCESS_KEY: 'key', MINIO_SECRET_KEY: 'secret' });
     expect(envs.isProduction).toBe(true);
     expect(envs.LOG_LEVEL).toBe('log');
     expect(envs.LOG_FORMAT).toBe('json');
     expect(envs.SWAGGER_ENABLED).toBe(false);
     expect(envs.CORS_ORIGINS).toEqual([]);
+  });
+
+  it('uses local MinIO defaults in development and requires credentials in production', () => {
+    const envs = parseEnvs(required);
+    expect(envs).toMatchObject({ MINIO_ENDPOINT: 'localhost', MINIO_PORT: 9000, MINIO_ACCESS_KEY: 'minioadmin' });
+    expect(envs.STORAGE_URL_EXPIRES_IN).toBe(3 * 3600);
+    expect(() => parseEnvs({ ...required, NODE_ENV: 'production' })).toThrow(/MINIO_ACCESS_KEY is required/);
+  });
+
+  it('validates MINIO_PUBLIC_URL as an origin', () => {
+    expect(parseEnvs({ ...required, MINIO_PUBLIC_URL: 'https://media.example.com' }).MINIO_PUBLIC_URL).toBe(
+      'https://media.example.com',
+    );
+    expect(() => parseEnvs({ ...required, MINIO_PUBLIC_URL: 'media.example.com/files' })).toThrow(/MINIO_PUBLIC_URL/);
   });
 
   it('parses typed values', () => {

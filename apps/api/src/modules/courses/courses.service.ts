@@ -6,6 +6,8 @@ import type { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import type { Course as CourseRecord, Prisma } from '../../generated/prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import type { AuthUser } from '../auth/auth.types';
+import { toTestSummary } from '../lesson-tests/lesson-tests.utils';
+import { orderedLessonSelect, toLessonOutline, toOrderedLesson } from '../progress/progress.utils';
 import type { CreateCourseDto } from './dto/create-course.dto';
 import type { UpdateCourseDto } from './dto/update-course.dto';
 
@@ -83,8 +85,9 @@ export class CoursesService extends BaseService<CourseRecord, CreateCourseDto, U
           include: {
             lessons: {
               orderBy: [{ position: 'asc' }, { created_at: 'asc' }],
-              select: { id: true, title: true, position: true, video_duration: true, test: { select: { id: true } } },
+              select: orderedLessonSelect,
             },
+            test: { include: { _count: { select: { questions: true } } } },
           },
         },
       },
@@ -100,7 +103,8 @@ export class CoursesService extends BaseService<CourseRecord, CreateCourseDto, U
         position: module.position,
         created_at: module.created_at.toISOString(),
         updated_at: module.updated_at.toISOString(),
-        lessons: module.lessons.map(({ test, ...lesson }) => ({ ...lesson, has_test: test !== null })),
+        lessons: module.lessons.map((lesson) => toLessonOutline(toOrderedLesson(lesson))),
+        test: module.test ? toTestSummary(module.test) : null,
       })),
     };
   }

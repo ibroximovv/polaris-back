@@ -1,6 +1,6 @@
 import { UnsupportedMediaTypeException } from '@nestjs/common';
 import type { Request } from 'express';
-import { createMulterOptions, generateFileName, isMimeTypeAllowed } from './multer.config';
+import { createMulterOptions, decodeOriginalName, generateFileName, isMimeTypeAllowed } from './multer.config';
 
 describe('isMimeTypeAllowed', () => {
   it('matches exact types and wildcards', () => {
@@ -44,5 +44,13 @@ describe('createMulterOptions', () => {
     const cb = jest.fn();
     options.fileFilter?.({} as Request, { mimetype: 'image/png' } as Express.Multer.File, cb);
     expect(cb).toHaveBeenCalledWith(null, true);
+  });
+});
+
+describe('decodeOriginalName', () => {
+  it('re-decodes UTF-8 names read as latin1 and keeps plain ASCII', () => {
+    const latin1 = Buffer.from('Дарс.pdf', 'utf8').toString('latin1');
+    expect(decodeOriginalName(latin1)).toBe('Дарс.pdf');
+    expect(decodeOriginalName('lesson.pdf')).toBe('lesson.pdf');
   });
 });

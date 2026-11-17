@@ -1,15 +1,17 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import type { Lesson, LessonDetail, LessonMaterial } from '@nestjs-template/types';
 import { BaseService } from '../../common/base/base.service';
 import type { CrudRepository } from '../../common/base/crud-repository.interface';
-import type { Lesson as LessonRecord, LessonMaterial as LessonMaterialRecord } from '../../generated/prisma/client';
+import type { Lesson as LessonRecord } from '../../generated/prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import type { AuthUser } from '../auth/auth.types';
+import { toTestSummary } from '../lesson-tests/lesson-tests.utils';
 import { ProgressService } from '../progress/progress.service';
 import type { CreateLessonDto, UpdateLessonDto } from './dto/create-lesson.dto';
-import type { CreateMaterialDto, UpdateMaterialDto } from './dto/create-material.dto';
+import { LessonMediaService, materialOrder } from './lesson-media.service';
+import { withUpload } from './lesson-media.utils';
 
-export type { LessonMaterialRecord, LessonRecord };
+export type { LessonRecord };
 
 export function toLessonResponse(record: LessonRecord): Lesson {
   return {
@@ -18,16 +20,10 @@ export function toLessonResponse(record: LessonRecord): Lesson {
     title: record.title,
     description: record.description,
     content: record.content,
-    video_url: record.video_url,
-    video_duration: record.video_duration,
     position: record.position,
     created_at: record.created_at.toISOString(),
     updated_at: record.updated_at.toISOString(),
   };
-}
-
-export function toMaterialResponse(record: LessonMaterialRecord): LessonMaterial {
-  return { id: record.id, lesson_id: record.lesson_id, title: record.title, url: record.url, position: record.position };
 }
 
 function createLessonRepository(prisma: PrismaService): CrudRepository<LessonRecord, CreateLessonDto, UpdateLessonDto, string> {
@@ -52,6 +48,7 @@ export class LessonsService extends BaseService<LessonRecord, CreateLessonDto, U
   constructor(
     private readonly prisma: PrismaService,
     private readonly progressService: ProgressService,
+    private readonly mediaService: LessonMediaService,
   ) {
     super(createLessonRepository(prisma));
   }
@@ -60,55 +57,37 @@ export class LessonsService extends BaseService<LessonRecord, CreateLessonDto, U
     return toLessonResponse(record);
   }
 
-  /** Lesson page: video, guide, materials and test summary. Locked lessons return 403 to students. */
+  /** Lesson page: video, guide, ordered materials and test summary. Locked lessons return 403 to students. */
   async findDetail(user: AuthUser, id: string): Promise<LessonDetail> {
     await this.progressService.assertLessonOpen(user, id);
     const lesson = await this.prisma.lesson.findUnique({
       where: { id },
       include: {
-        materials: { orderBy: [{ position: 'asc' }, { created_at: 'asc' }] },
+        video: { include: withUpload },
+        materials: { orderBy: materialOrder, include: withUpload },
         test: { include: { _count: { select: { questions: true } } } },
       },
     });
     if (!lesson) throw this.notFound(id);
-    const { materials, test, ...record } = lesson;
+    const { video, materials, test, ...record } = lesson;
     return {
       ...toLessonResponse(record),
-      materials: materials.map(toMaterialResponse),
-      test: test
-        ? {
-            id: test.id,
-            title: test.title,
-            pass_score: test.pass_score,
-            max_attempts: test.max_attempts,
-            question_count: test._count.questions,
-          }
-        : null,
+      video: video ? await this.mediaService.toVideo(video) : null,
+      materials: await this.mediaService.toMaterials(materials),
+      test: test ? toTestSummary(test) : null,
     };
   }
 
-  async addMaterial(lessonId: string, dto: CreateMaterialDto): Promise<LessonMaterial> {
-    await this.findEntityOrFail(lessonId);
-    try {
-      return toMaterialResponse(await this.prisma.lessonMaterial.create({ data: { ...dto, lesson_id: lessonId } }));
-    } catch (error) {
-      throw this.mapError(error, lessonId);
-    }
+  /** Materials of an open lesson. */
+  async listMaterials(user: AuthUser, id: string): Promise<LessonMaterial[]> {
+    await this.progressService.assertLessonOpen(user, id);
+    return this.mediaService.listMaterials(id);
   }
 
-  async updateMaterial(materialId: string, dto: UpdateMaterialDto): Promise<LessonMaterial> {
-    await this.findMaterialOrFail(materialId);
-    return toMaterialResponse(await this.prisma.lessonMaterial.update({ where: { id: materialId }, data: dto }));
-  }
-
-  async removeMaterial(materialId: string): Promise<void> {
-    await this.findMaterialOrFail(materialId);
-    await this.prisma.lessonMaterial.delete({ where: { id: materialId } });
-  }
-
-  private async findMaterialOrFail(id: string): Promise<LessonMaterialRecord> {
-    const material = await this.prisma.lessonMaterial.findUnique({ where: { id } });
-    if (!material) throw new NotFoundException(`Material #${id} not found`);
-    return material;
+  /** Deletes the lesson (video and material rows cascade) and then their uploads and files. */
+  async remove(id: string): Promise<void> {
+    const uploadIds = await this.mediaService.uploadIdsOfLesson(id);
+    await super.remove(id);
+    await this.mediaService.deleteUploads(uploadIds);
   }
 }

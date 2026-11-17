@@ -51,6 +51,25 @@ export interface Envs {
   /** Exact types (`image/png`) or wildcards (`image/*`). Empty list allows everything. */
   UPLOAD_ALLOWED_MIME_TYPES: string[];
 
+  // Object storage (MinIO, S3 compatible)
+  MINIO_ENDPOINT: string;
+  MINIO_PORT: number;
+  MINIO_USE_SSL: boolean;
+  MINIO_ACCESS_KEY: string;
+  MINIO_SECRET_KEY: string;
+  MINIO_BUCKET: string;
+  MINIO_REGION: string;
+  /** Origin browsers use to reach MinIO (`https://cdn.example.com`). Signed links are built for it. */
+  MINIO_PUBLIC_URL: string | undefined;
+  /** Lifetime of signed download links, seconds. */
+  STORAGE_URL_EXPIRES_IN: number;
+  /** Lifetime of presigned upload forms, seconds. */
+  STORAGE_UPLOAD_EXPIRES_IN: number;
+  /** Largest lesson media file (video, image, document). */
+  MEDIA_MAX_FILE_SIZE_MB: number;
+  /** Allowed lesson media types; same syntax as UPLOAD_ALLOWED_MIME_TYPES. */
+  MEDIA_ALLOWED_MIME_TYPES: string[];
+
   // Redis / background jobs (BullMQ)
   REDIS_HOST: string;
   REDIS_PORT: number;
@@ -205,6 +224,33 @@ export function parseEnvs(source: Source): Envs {
       'application/pdf',
     ]),
 
+    MINIO_ENDPOINT: env.string('MINIO_ENDPOINT', 'localhost'),
+    MINIO_PORT: env.int('MINIO_PORT', 9000, { min: 1, max: 65535 }),
+    MINIO_USE_SSL: env.bool('MINIO_USE_SSL', false),
+    // Local MinIO defaults; production must set real credentials.
+    MINIO_ACCESS_KEY: env.string('MINIO_ACCESS_KEY', isProduction ? undefined : 'minioadmin'),
+    MINIO_SECRET_KEY: env.string('MINIO_SECRET_KEY', isProduction ? undefined : 'minioadmin'),
+    MINIO_BUCKET: env.string('MINIO_BUCKET', 'turizm'),
+    MINIO_REGION: env.string('MINIO_REGION', 'us-east-1'),
+    MINIO_PUBLIC_URL: env.optionalString('MINIO_PUBLIC_URL'),
+    STORAGE_URL_EXPIRES_IN: env.duration('STORAGE_URL_EXPIRES_IN', 3 * 3600),
+    STORAGE_UPLOAD_EXPIRES_IN: env.duration('STORAGE_UPLOAD_EXPIRES_IN', 3600),
+    MEDIA_MAX_FILE_SIZE_MB: env.int('MEDIA_MAX_FILE_SIZE_MB', 2048, { min: 1, max: 51200 }),
+    MEDIA_ALLOWED_MIME_TYPES: env.list('MEDIA_ALLOWED_MIME_TYPES', [
+      'video/*',
+      'image/*',
+      'audio/*',
+      'application/pdf',
+      'application/zip',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.ms-powerpoint',
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'text/plain',
+    ]),
+
     REDIS_HOST: env.string('REDIS_HOST', 'localhost'),
     REDIS_PORT: env.int('REDIS_PORT', 6379, { min: 1, max: 65535 }),
     REDIS_PASSWORD: env.optionalString('REDIS_PASSWORD'),
@@ -225,6 +271,10 @@ export function parseEnvs(source: Source): Envs {
 
   if (envs.JWT_ACCESS_SECRET !== '' && envs.JWT_ACCESS_SECRET === envs.JWT_REFRESH_SECRET) {
     env.errors.push('JWT_ACCESS_SECRET and JWT_REFRESH_SECRET must be different');
+  }
+
+  if (envs.MINIO_PUBLIC_URL !== undefined && !/^https?:\/\/[^/]+\/?$/.test(envs.MINIO_PUBLIC_URL)) {
+    env.errors.push(`MINIO_PUBLIC_URL must be an origin like https://cdn.example.com, got "${envs.MINIO_PUBLIC_URL}"`);
   }
 
   if (env.errors.length > 0) {

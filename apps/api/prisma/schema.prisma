@@ -33,13 +33,49 @@ model User {
   updated_at         DateTime  @updatedAt
 
   lesson_progress LessonProgress[]
+  module_progress ModuleProgress[]
   test_attempts   TestAttempt[]
+  uploads         Upload[]
 
   @@map("users")
 }
 
 // ---------------------------------------------------------------------------
-// Learning: course -> modules -> lessons (video + guide + materials) -> test
+// Files: every file is uploaded once through /uploads, then attached by id
+// ---------------------------------------------------------------------------
+
+enum UploadStatus {
+  /// Presigned upload issued, the file is not confirmed yet.
+  PENDING
+  READY
+}
+
+/// A file stored in MinIO. Attached to at most one owner (lesson video or material);
+/// deleting the owner deletes the upload and its object.
+model Upload {
+  id          String       @id @default(uuid()) @db.Uuid
+  /// Object key in the storage bucket.
+  object_key  String       @unique
+  /// Original file name (used for downloads).
+  file_name   String
+  mime_type   String
+  /// Bytes; for PENDING the declared size, then the stored size.
+  size        BigInt
+  status      UploadStatus @default(READY)
+  uploaded_by String?      @db.Uuid
+  created_at  DateTime     @default(now())
+  updated_at  DateTime     @updatedAt
+
+  user            User?           @relation(fields: [uploaded_by], references: [id], onDelete: SetNull)
+  lesson_video    LessonVideo?
+  lesson_material LessonMaterial?
+
+  @@index([status, created_at])
+  @@map("uploads")
+}
+
+// ---------------------------------------------------------------------------
+// Learning: course -> modules (final test) -> lessons (one video + guide + materials, optional test)
 // ---------------------------------------------------------------------------
 
 model Course {
@@ -67,30 +103,31 @@ model CourseModule {
   created_at  DateTime @default(now())
   updated_at  DateTime @updatedAt
 
-  course  Course   @relation(fields: [course_id], references: [id], onDelete: Cascade)
-  lessons Lesson[]
+  course   Course           @relation(fields: [course_id], references: [id], onDelete: Cascade)
+  lessons  Lesson[]
+  /// Final test of the module; opens after every lesson of the module is completed.
+  test     LessonTest?
+  progress ModuleProgress[]
 
   @@index([course_id, position])
   @@map("course_modules")
 }
 
-/// A topic (mavzu): one video, a written guide and downloadable materials.
+/// A topic (mavzu): at most one video, a written guide, ordered materials (files, images) and an optional test.
 model Lesson {
-  id             String   @id @default(uuid()) @db.Uuid
-  module_id      String   @db.Uuid
-  title          String
-  description    String?
+  id          String   @id @default(uuid()) @db.Uuid
+  module_id   String   @db.Uuid
+  title       String
+  description String?
   /// Written guide for the lesson (markdown).
-  content        String?
-  video_url      String?
-  /// Video length in seconds. Watch progress is measured against it.
-  video_duration Int?
+  content     String?
   /// Order inside the module (ascending).
-  position       Int      @default(0)
-  created_at     DateTime @default(now())
-  updated_at     DateTime @updatedAt
+  position    Int      @default(0)
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
 
   module    CourseModule     @relation(fields: [module_id], references: [id], onDelete: Cascade)
+  video     LessonVideo?
   materials LessonMaterial[]
   test      LessonTest?
   progress  LessonProgress[]
@@ -99,26 +136,57 @@ model Lesson {
   @@map("lessons")
 }
 
-model LessonMaterial {
-  id         String   @id @default(uuid()) @db.Uuid
-  lesson_id  String   @db.Uuid
-  title      String
-  url        String
-  position   Int      @default(0)
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
+/// The single video of a lesson: an uploaded file (`upload_id`) or an external link (`external_url`), exactly one.
+model LessonVideo {
+  id           String   @id @default(uuid()) @db.Uuid
+  lesson_id    String   @unique @db.Uuid
+  upload_id    String?  @unique @db.Uuid
+  external_url String?
+  title        String?
+  /// Length in seconds. Watch progress is measured against it; null = not tracked/required.
+  duration     Int?
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
 
-  lesson Lesson @relation(fields: [lesson_id], references: [id], onDelete: Cascade)
+  lesson Lesson  @relation(fields: [lesson_id], references: [id], onDelete: Cascade)
+  upload Upload? @relation(fields: [upload_id], references: [id], onDelete: Restrict)
+
+  @@map("lesson_videos")
+}
+
+enum MaterialType {
+  IMAGE
+  FILE
+}
+
+/// A guide file or image of a lesson, shown in `position` order: an uploaded file or an external link, exactly one.
+model LessonMaterial {
+  id           String       @id @default(uuid()) @db.Uuid
+  lesson_id    String       @db.Uuid
+  upload_id    String?      @unique @db.Uuid
+  external_url String?
+  type         MaterialType @default(FILE)
+  title        String?
+  position     Int          @default(0)
+  created_at   DateTime     @default(now())
+  updated_at   DateTime     @updatedAt
+
+  lesson Lesson  @relation(fields: [lesson_id], references: [id], onDelete: Cascade)
+  upload Upload? @relation(fields: [upload_id], references: [id], onDelete: Restrict)
 
   @@index([lesson_id, position])
   @@map("lesson_materials")
 }
 
-/// The test taken after a lesson's video. One per lesson.
+/// A test of a lesson (taken after its video) or the final test of a module. Exactly one of
+/// `lesson_id` / `module_id` is set; a lesson and a module have at most one test each.
 model LessonTest {
   id           String   @id @default(uuid()) @db.Uuid
-  lesson_id    String   @unique @db.Uuid
+  lesson_id    String?  @unique @db.Uuid
+  module_id    String?  @unique @db.Uuid
   title        String?
+  /// Points the test is worth. Questions without explicit points share what is left evenly.
+  total_points Int      @default(100)
   /// Minimum percent (0-100) needed to pass.
   pass_score   Int      @default(70)
   /// null = unlimited attempts.
@@ -126,7 +194,8 @@ model LessonTest {
   created_at   DateTime @default(now())
   updated_at   DateTime @updatedAt
 
-  lesson    Lesson         @relation(fields: [lesson_id], references: [id], onDelete: Cascade)
+  lesson    Lesson?        @relation(fields: [lesson_id], references: [id], onDelete: Cascade)
+  module    CourseModule?  @relation(fields: [module_id], references: [id], onDelete: Cascade)
   questions TestQuestion[]
   attempts  TestAttempt[]
 
@@ -137,7 +206,8 @@ model TestQuestion {
   id         String   @id @default(uuid()) @db.Uuid
   test_id    String   @db.Uuid
   text       String
-  points     Int      @default(1)
+  /// Explicit points; null = an even share of what the test total leaves after explicit points.
+  points     Int?
   position   Int      @default(0)
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
@@ -231,4 +301,22 @@ model LessonProgress {
   @@unique([user_id, lesson_id])
   @@index([lesson_id])
   @@map("lesson_progress")
+}
+
+/// Per-user state of a module's final test.
+model ModuleProgress {
+  id                String    @id @default(uuid()) @db.Uuid
+  user_id           String    @db.Uuid
+  module_id         String    @db.Uuid
+  best_test_percent Int?
+  test_passed_at    DateTime?
+  created_at        DateTime  @default(now())
+  updated_at        DateTime  @updatedAt
+
+  user   User         @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  module CourseModule @relation(fields: [module_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, module_id])
+  @@index([module_id])
+  @@map("module_progress")
 }

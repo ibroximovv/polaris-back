@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional, OmitType, PartialType } from '@nestjs/swagger';
-import { IsInt, IsNotEmpty, IsOptional, IsString, IsUrl, IsUUID, MaxLength, Min } from 'class-validator';
+import { IsInt, IsNotEmpty, IsOptional, IsString, IsUUID, MaxLength, Min } from 'class-validator';
 
 export class CreateLessonDto {
   @ApiProperty({ format: 'uuid' })
@@ -23,22 +23,6 @@ export class CreateLessonDto {
   @IsString()
   @MaxLength(100000)
   content?: string | null;
-
-  @ApiPropertyOptional({ type: String, nullable: true })
-  @IsOptional()
-  @IsUrl()
-  video_url?: string | null;
-
-  @ApiPropertyOptional({
-    type: Number,
-    nullable: true,
-    minimum: 1,
-    description: 'Video length in seconds. Without it the video is not tracked and not required',
-  })
-  @IsOptional()
-  @IsInt()
-  @Min(1)
-  video_duration?: number | null;
 
   @ApiPropertyOptional({ minimum: 0, default: 0, description: 'Order inside the module (ascending)' })
   @IsOptional()

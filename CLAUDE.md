@@ -20,6 +20,8 @@ apps/
                           AllExceptionsFilter, AppLogger (LOG_* env), RequestLoggerMiddleware
     src/swagger/          setupSwagger (SWAGGER_* env), default /api/docs
     src/upload/           UploadModule + ApiFileUpload/ApiFilesUpload (multer, UPLOAD_* env)
+    src/storage/          StorageModule: MinIO (MINIO_* env), presigned upload/download, private bucket
+    src/realtime/         RealtimeModule: socket.io namespace /learning (JWT auth, user/admin rooms), RealtimeService
     src/jobs/             JobsModule (BullMQ + Redis), QUEUES, BaseProcessor, @JobProcessor
     src/prisma/           PrismaModule (@Global) + PrismaService (pg driver adapter)
     src/generated/prisma  `prisma generate` natijasi (gitignore'da, qo'lda tahrirlanmaydi)
@@ -47,9 +49,10 @@ packages/
 | `users` | tayyor (minimal) | `User` modeli, `GET /users/me`. Admin CRUD hali yo'q |
 | `courses` | tayyor | kurs CRUD (admin), ro'yxat va kurs tuzilmasi (talaba faqat `is_published`) |
 | `course-modules` | tayyor | kurs modullari CRUD (faqat admin), route `/modules` |
-| `lessons` | tayyor | dars (video, qo'llanma, materiallar). Talabaga qulflangan dars 403 |
-| `lesson-tests` | tayyor | har dars uchun bitta test, savollar, urinishlar. Baholash faqat serverda, route `/tests` |
-| `progress` | tayyor | video aniq ko'rilgan soniyalar, darslarni ketma-ket ochish, talaba va admin ko'rsatkichlari. Qoidalar: `docs/learning-flow.md` |
+| `lessons` | tayyor | dars, bitta video (`LessonVideo`) va tartiblangan qo'llanmalar (fayl/rasm): `upload_id` yoki tashqi link. Talabaga qulflangan dars 403 |
+| `lesson-tests` | tayyor | dars testi (ixtiyoriy) yoki modulning yakuniy testi, dinamik ball (`total_points`, savol ballari yoki avtomatik ulush), urinishlar. Baholash faqat serverda, route `/tests` |
+| `uploads` | tayyor | barcha fayllar uchun yagona kirish: `POST /uploads` (multipart), katta fayllar uchun presigned + complete. Boshqa modullar faylni `upload_id` bilan bog'laydi (`UploadsService.getAttachable`/`deleteUploads`). Hozircha faqat admin |
+| `progress` | tayyor | video aniq ko'rilgan soniyalar, dars → modul testi → keyingi modul tartibida ochish, test statistikasi (`ProgressStatsService`), socket.io real-time (`ProgressGateway`). Qoidalar: `docs/learning-flow.md` |
 | `todos` | namuna | shablondan qolgan, domen emas, keyin o'chiriladi |
 
 Yangi modul qo'shilganda shu jadval yangilanadi.
@@ -61,6 +64,10 @@ Rollar: global `RolesGuard` (`JwtAuthGuard` dan keyin). Admin route'lar `@Roles(
 - Yangi env o'zgaruvchi: `apps/api/src/config/envs.ts` dagi `Envs` interface va `parseEnvs` ga qo'shiladi, `.env.example` ga namunasi yoziladi. `.env` eng yaqin papkadan (cwd'dan yuqoriga qarab) yoki `ENV_FILE` dan yuklanadi.
 - Log darajasi `LOG_LEVEL` (fatal | error | warn | log | debug | verbose), format `LOG_FORMAT` (pretty | json). Kodda `new Logger(MyService.name)` ishlatiladi, `console.log` emas.
 - Background job'lar uchun Redis kerak (`REDIS_*`). Queue ro'yxatdan o'tkazilmaguncha Redis'ga ulanilmaydi, shuning uchun hozir API Redis'siz ham ishga tushadi.
+- Fayllar MinIO'da (`MINIO_*`, `STORAGE_*`, `MEDIA_*`). MinIO ishlamasa API baribir ishga tushadi (ogohlantirish yoziladi), fayl amallari 503 qaytaradi.
+- Yangi fayl qabul qiluvchi joy o'z upload endpoint'ini yaratmaydi: fayl `POST /uploads` dan keladi, modul `UploadsModule` ni import qilib `upload_id` ni `UploadsService.getAttachable()` bilan tekshiradi va egasi o'chirilganda `deleteUploads()` ni chaqiradi.
+- WebSocket: global `JwtAuthGuard`/`RolesGuard` `ws` kontekstini ham qo'llab-quvvatlaydi; socket'lar namespace middleware'da autentifikatsiya qilinadi. Yangi gateway `LEARNING_GATEWAY_OPTIONS` va `wsAck`/`parseWsPayload` (`src/realtime/ws.utils.ts`) dan foydalanadi.
+- `packages/types` dan runtime qiymat (masalan `LEARNING_WS_EVENTS`) import qilish mumkin: build uni `deps.alwaysBundle` bilan bundle qiladi.
 
 ### Ma'lumotlar bazasi
 

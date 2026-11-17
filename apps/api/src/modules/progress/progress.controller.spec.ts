@@ -1,6 +1,7 @@
 import { Test } from '@nestjs/testing';
 import type { AuthUser } from '../auth/auth.types';
 import { ProgressController } from './progress.controller';
+import { ProgressStatsService } from './progress-stats.service';
 import { ProgressService } from './progress.service';
 
 describe('ProgressController', () => {
@@ -11,6 +12,7 @@ describe('ProgressController', () => {
     getCourseProgress: jest.fn(),
     listCourseStudents: jest.fn(),
   };
+  const stats = { getCourseTestStats: jest.fn() };
   const user: AuthUser = { id: 'u1', role: 'USER' };
   const admin: AuthUser = { id: 'a1', role: 'ADMIN' };
   let controller: ProgressController;
@@ -19,7 +21,10 @@ describe('ProgressController', () => {
     jest.resetAllMocks();
     const moduleRef = await Test.createTestingModule({
       controllers: [ProgressController],
-      providers: [{ provide: ProgressService, useValue: service }],
+      providers: [
+        { provide: ProgressService, useValue: service },
+        { provide: ProgressStatsService, useValue: stats },
+      ],
     }).compile();
     controller = moduleRef.get(ProgressController);
   });
@@ -42,5 +47,13 @@ describe('ProgressController', () => {
     await expect(controller.students('c1', query)).resolves.toBe('students');
     await expect(controller.student(admin, 'c1', 'u1')).resolves.toBe('course');
     expect(service.getCourseProgress).toHaveBeenLastCalledWith(admin, 'c1', 'u1');
+  });
+
+  it('delegates stats routes', async () => {
+    stats.getCourseTestStats.mockResolvedValue('stats');
+    await expect(controller.stats(user, 'c1')).resolves.toBe('stats');
+    expect(stats.getCourseTestStats).toHaveBeenLastCalledWith(user, 'c1');
+    await expect(controller.studentStats(admin, 'c1', 'u1')).resolves.toBe('stats');
+    expect(stats.getCourseTestStats).toHaveBeenLastCalledWith(admin, 'c1', 'u1');
   });
 });
